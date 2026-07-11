@@ -1,0 +1,244 @@
+{
+  "version": 1,
+  "updated": "2026-07-11",
+  "edit_tiers": ["haiku", "sonnet", "fable"],
+  "components": [
+    {
+      "id": "slam_interfaces",
+      "path": "ros2_ws/src/slam_interfaces",
+      "kind": "ros_msgs",
+      "depends_on": ["std_msgs", "geometry_msgs"],
+      "edit_tier": "fable",
+      "review_required": true,
+      "notes": "Contract-frozen. Every node and the recorder depend on these layouts."
+    },
+    {
+      "id": "slam_core",
+      "path": "ros2_ws/src/slam_core",
+      "kind": "header_only_lib",
+      "depends_on": ["eigen"],
+      "edit_tier": "fable",
+      "review_required": true,
+      "files": {
+        "lie_group.hpp": "SO(3) Exp/Log/Jr; small-angle branches",
+        "imu_preintegration.hpp": "delta accumulation; covariance/Jacobians TODO",
+        "imu_buffer.hpp": "time-ordered buffer (mechanical; sonnet ok with review)",
+        "health_rules.hpp": "threshold rules (threshold tweaks are haiku via configs)",
+        "factor_residuals.hpp": "residual layouts 15/2/1-dof; layouts are frozen"
+      }
+    },
+    {
+      "id": "vio_node",
+      "path": "ros2_ws/src/vio_node",
+      "kind": "ros_node",
+      "depends_on": ["slam_core", "slam_interfaces", "rclcpp", "sensor_msgs", "geometry_msgs"],
+      "edit_tier": "sonnet",
+      "sub_tiers": {
+        "include/vio_node/sliding_window_estimator.hpp": "fable",
+        "include/vio_node/image_preprocessor.hpp": "sonnet",
+        "include/vio_node/feature_tracker.hpp": "sonnet",
+        "include/vio_node/keyframe_policy.hpp": "sonnet",
+        "src/vio_node.cpp": "sonnet"
+      }
+    },
+    {
+      "id": "lio_node",
+      "path": "ros2_ws/src/lio_node",
+      "kind": "ros_node",
+      "depends_on": ["slam_core", "slam_interfaces", "rclcpp", "sensor_msgs", "geometry_msgs"],
+      "edit_tier": "sonnet",
+      "sub_tiers": {
+        "include/lio_node/degeneracy_detector.hpp": "fable",
+        "include/lio_node/point_to_plane_icp.hpp": "sonnet, fable review",
+        "include/lio_node/scan_deskew.hpp": "sonnet",
+        "include/lio_node/voxel_downsampler.hpp": "sonnet",
+        "include/lio_node/local_map_manager.hpp": "sonnet",
+        "src/lio_node.cpp": "sonnet"
+      }
+    },
+    {
+      "id": "fusion_node",
+      "path": "ros2_ws/src/fusion_node",
+      "kind": "ros_node",
+      "depends_on": ["slam_core", "slam_interfaces", "rclcpp", "sensor_msgs", "geometry_msgs", "nav_msgs"],
+      "edit_tier": "sonnet",
+      "sub_tiers": {
+        "include/fusion_node/fusion_backend.hpp": "fable (interface); new backends impl sonnet after fable design"
+      }
+    },
+    {
+      "id": "tensor_frontend_node",
+      "path": "ros2_ws/src/tensor_frontend_node",
+      "kind": "ros_node",
+      "depends_on": ["rclcpp", "sensor_msgs", "cuda(optional)", "tensorrt(optional)"],
+      "edit_tier": "sonnet"
+    },
+    {
+      "id": "health_monitor_node",
+      "path": "ros2_ws/src/health_monitor_node",
+      "kind": "ros_node",
+      "depends_on": ["slam_core", "slam_interfaces", "rclcpp"],
+      "edit_tier": "sonnet",
+      "notes": "Rule logic lives in slam_core (fable); this node is plumbing."
+    },
+    {
+      "id": "map_node",
+      "path": "ros2_ws/src/map_node",
+      "kind": "ros_node",
+      "depends_on": ["rclcpp", "sensor_msgs"],
+      "edit_tier": "sonnet"
+    },
+    {
+      "id": "recorder_node",
+      "path": "ros2_ws/src/recorder_node",
+      "kind": "ros_node",
+      "depends_on": ["slam_interfaces", "rclcpp", "sensor_msgs"],
+      "edit_tier": "sonnet",
+      "notes": "Invariant: local filesystem only, no network/AWS. Boundary changes are fable."
+    },
+    {
+      "id": "slam_bringup",
+      "path": "ros2_ws/src/slam_bringup",
+      "kind": "launch",
+      "depends_on": ["all nodes (exec)"],
+      "edit_tier": "haiku"
+    },
+    {
+      "id": "configs",
+      "path": "configs",
+      "kind": "params",
+      "depends_on": [],
+      "edit_tier": "haiku",
+      "notes": "Health thresholds and estimator noise values: haiku edits, but cite the source of any new value."
+    },
+    {
+      "id": "tests",
+      "path": "tests",
+      "kind": "unit_tests",
+      "depends_on": ["slam_core", "eigen"],
+      "edit_tier": "sonnet",
+      "notes": "Tier follows the component under test; slam_core math tests are fable-reviewed."
+    },
+    {
+      "id": "docker",
+      "path": "docker",
+      "kind": "infra",
+      "depends_on": [],
+      "edit_tier": "sonnet"
+    },
+    {
+      "id": "scripts",
+      "path": "scripts",
+      "kind": "infra",
+      "depends_on": [],
+      "edit_tier": "haiku"
+    },
+    {
+      "id": "docs",
+      "path": "docs",
+      "kind": "docs",
+      "depends_on": [],
+      "edit_tier": "haiku",
+      "notes": "agent_protocol.md and code_graph.json themselves: sonnet+, fable for routing-policy changes."
+    }
+  ],
+  "activities": [
+    {
+      "id": "A1",
+      "title": "IMU preintegration covariance propagation + bias-update Jacobians",
+      "components": ["slam_core", "tests"],
+      "files": ["ros2_ws/src/slam_core/include/slam_core/imu_preintegration.hpp", "tests/test_imu_preintegration.cpp"],
+      "tier": "fable",
+      "reference": "Forster et al. RSS'15, eq. 62-64",
+      "acceptance": "15x15 covariance PSD under random-walk inputs; first-order bias correction matches numeric Jacobian in new tests"
+    },
+    {
+      "id": "A2",
+      "title": "Replace slam_core lie_group placeholder with Sophus",
+      "components": ["slam_core", "tests", "docker"],
+      "tier": "sonnet",
+      "blocked_by": ["A12"],
+      "acceptance": "API kept (expSO3/logSO3/rightJacobianSO3 wrappers); existing tests pass unchanged"
+    },
+    {
+      "id": "A3",
+      "title": "Real feature tracker in vio_node (KLT or /slam/frontend/features consumer)",
+      "components": ["vio_node"],
+      "files": ["ros2_ws/src/vio_node/include/vio_node/feature_tracker.hpp"],
+      "tier": "sonnet",
+      "acceptance": "TrackResult contract unchanged; median reprojection error populated; num_tracked reflects real track continuity"
+    },
+    {
+      "id": "A4",
+      "title": "Sliding-window backend (Ceres or GTSAM fixed-lag smoother)",
+      "components": ["vio_node", "slam_core"],
+      "tier": "fable design -> sonnet impl",
+      "blocked_by": ["A1"],
+      "acceptance": "EstimatorOutput contract unchanged; condition_number computed from real information matrix"
+    },
+    {
+      "id": "A5",
+      "title": "Real point-to-plane ICP (small_gicp or Gauss-Newton)",
+      "components": ["lio_node"],
+      "files": ["ros2_ws/src/lio_node/include/lio_node/point_to_plane_icp.hpp"],
+      "tier": "sonnet",
+      "review": "fable",
+      "blocked_by": ["A1"],
+      "acceptance": "IcpResult contract unchanged; hessian is the true J^T J; convergence on synthetic plane fixtures in new tests"
+    },
+    {
+      "id": "A6",
+      "title": "Scan deskew using per-point time fields",
+      "components": ["lio_node"],
+      "files": ["ros2_ws/src/lio_node/include/lio_node/scan_deskew.hpp"],
+      "tier": "sonnet",
+      "acceptance": "Slerp interpolation over scan; passthrough retained when time field absent"
+    },
+    {
+      "id": "A7",
+      "title": "Degeneracy solution remapping (Zhang & Singh)",
+      "components": ["lio_node"],
+      "tier": "fable",
+      "blocked_by": ["A5"],
+      "acceptance": "ICP update projected out of degenerate eigen-directions; corridor fixture shows bounded drift orthogonal to corridor axis"
+    },
+    {
+      "id": "A8",
+      "title": "Error-state EKF fusion backend",
+      "components": ["fusion_node", "slam_core"],
+      "tier": "fable design -> sonnet impl",
+      "blocked_by": ["A1"],
+      "acceptance": "Implements FusionBackend; selected via backend: ekf param; weighted backend remains default until validated"
+    },
+    {
+      "id": "A9",
+      "title": "GPS ENU anchoring + wheel-odom frame alignment",
+      "components": ["fusion_node"],
+      "tier": "sonnet",
+      "blocked_by": ["A8"],
+      "acceptance": "GPS/wheel weights become configurable non-zero; first-fix ENU anchor; covariance gating from NavSatFix"
+    },
+    {
+      "id": "A10",
+      "title": "TrtEngine: deserialize .engine, enqueueV3, decode SuperPoint outputs",
+      "components": ["tensor_frontend_node"],
+      "files": ["ros2_ws/src/tensor_frontend_node/src/inference_engine.cpp"],
+      "tier": "sonnet",
+      "acceptance": "ready()==true with valid engine; keypoints+descriptors populated; Null path untouched; compiles with and without ENABLE_TENSORRT"
+    },
+    {
+      "id": "A11",
+      "title": "Persistent map in map_node (tiling or nvblox bridge)",
+      "components": ["map_node"],
+      "tier": "sonnet",
+      "blocked_by": ["A5"]
+    },
+    {
+      "id": "A12",
+      "title": "CI: GitHub Actions workflow running scripts/build.sh in ros:jazzy container",
+      "components": ["scripts", "docs"],
+      "tier": "sonnet design -> haiku maintain",
+      "acceptance": "PR-gating job: core ctest + colcon build; updates STATE.md 'Last verification' expectations"
+    }
+  ]
+}
