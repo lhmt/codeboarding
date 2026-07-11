@@ -5,6 +5,7 @@
 // +biases) or FactorGraphBackend (fixed-lag smoother) against this same
 // interface; select via the `backend` parameter in configs/fusion.yaml.
 
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>

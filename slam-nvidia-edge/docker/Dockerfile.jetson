@@ -1,0 +1,63 @@
+# slam-nvidia-edge runtime image for Jetson AGX Orin (Ubuntu 24.04 / ROS 2 Jazzy).
+#
+# Base image choice:
+#   - Plain `ros:jazzy` works for CPU-only builds (this default) on arm64/amd64.
+#   - For CUDA/TensorRT acceleration on Jetson, switch to an L4T/JetPack base,
+#     e.g. nvcr.io/nvidia/l4t-jetpack:r36.x (matching your JetPack release) and
+#     install ROS 2 Jazzy on top, or use an Isaac ROS base image:
+#     nvcr.io/nvidia/isaac/ros:aarch64-ros2_humble_... (check tag for Jazzy).
+#     TODO: pin the exact NVIDIA base for your fleet's JetPack version.
+ARG BASE_IMAGE=ros:jazzy
+FROM ${BASE_IMAGE}
+
+SHELL ["/bin/bash", "-c"]
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Build tools + math/vision/pointcloud deps.
+# Sophus: header-only; pulled from apt where available. slam_core currently
+# ships its own SO(3) placeholder, so Sophus is staged for the real estimator.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    libeigen3-dev \
+    libopencv-dev \
+    libpcl-dev \
+    ros-jazzy-sensor-msgs \
+    ros-jazzy-nav-msgs \
+    ros-jazzy-rosbag2-storage-mcap \
+    && rm -rf /var/lib/apt/lists/*
+
+# Sophus (header-only). TODO: replace slam_core lie_group placeholder with it.
+RUN git clone --depth 1 --branch 1.24.6 https://github.com/strasdat/Sophus.git /tmp/sophus \
+    && cmake -S /tmp/sophus -B /tmp/sophus/build -DSOPHUS_USE_BASIC_LOGGING=ON -DBUILD_SOPHUS_TESTS=OFF -DBUILD_SOPHUS_EXAMPLES=OFF \
+    && cmake --build /tmp/sophus/build --target install \
+    && rm -rf /tmp/sophus
+
+# CUDA / TensorRT:
+#   On an L4T/JetPack base these ship with the image (or via nvidia-l4t apt
+#   repos). Enable the accelerated build with:
+#     colcon build --cmake-args -DENABLE_CUDA=ON -DENABLE_TENSORRT=ON
+#   The default base builds CPU-only; the stack degrades gracefully
+#   (NullInferenceEngine, no CUDA streams).
+
+WORKDIR /workspace/slam-nvidia-edge
+COPY ros2_ws ros2_ws
+COPY configs configs
+COPY tests tests
+
+# ROS-free core tests first (fast failure), then the workspace.
+RUN cmake -S tests -B tests/build -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build tests/build -j"$(nproc)" \
+    && ctest --test-dir tests/build --output-on-failure
+
+RUN source /opt/ros/jazzy/setup.bash \
+    && cd ros2_ws \
+    && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+ENV SLAM_CONFIG_DIR=/workspace/slam-nvidia-edge/configs
+ENV SLAM_LOG_DIR=/workspace/slam-nvidia-edge/logs
+
+COPY docker/ros_entrypoint_overlay.sh /ros_entrypoint_overlay.sh
+ENTRYPOINT ["/ros_entrypoint_overlay.sh"]
+CMD ["ros2", "launch", "slam_bringup", "full_stack.launch.py"]

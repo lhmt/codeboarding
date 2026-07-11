@@ -1,0 +1,35 @@
+# Edge deployment on Jetson AGX Orin.
+#   docker compose -f docker/docker-compose.edge.yaml up -d
+services:
+  slam:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.jetson
+      # TODO: set to your JetPack-matched NVIDIA base for GPU builds.
+      # args:
+      #   BASE_IMAGE: nvcr.io/nvidia/l4t-jetpack:r36.4.0
+    image: slam-nvidia-edge:latest
+    network_mode: host          # DDS discovery
+    ipc: host                   # CycloneDDS/FastDDS shared memory transport
+    restart: unless-stopped
+    # Keep estimation off the interrupt-heavy cores; tune per platform.
+    cpuset: "4-11"
+    # GPU access on Jetson (requires nvidia-container-runtime):
+    # runtime: nvidia
+    environment:
+      - ROS_DOMAIN_ID=42
+      - SLAM_CONFIG_DIR=/workspace/slam-nvidia-edge/configs
+      - SLAM_LOG_DIR=/data/logs
+    volumes:
+      # Prefer an NVMe mount; MCAP at LiDAR rates will saturate eMMC.
+      - /data/slam-logs:/data/logs
+      # Live-edit configs without rebuilding the image.
+      - ../configs:/workspace/slam-nvidia-edge/configs:ro
+    command: ["ros2", "launch", "slam_bringup", "full_stack.launch.py"]
+
+  # Log uploader (S3 sync for SageMaker ingest) runs as a SEPARATE service,
+  # never inside the SLAM runtime container — see docs/sagemaker_boundary.md.
+  # uploader:
+  #   image: your-registry/edge-log-uploader:latest
+  #   volumes:
+  #     - /data/slam-logs:/data/logs:ro
