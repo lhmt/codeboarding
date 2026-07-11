@@ -1,0 +1,33 @@
+# LIO (LiDAR + IMU) parameters.
+lio_node:
+  ros__parameters:
+    lidar_topic: /lidar/points
+    imu_topic: /imu/data
+
+    # Deskew
+    scan_period_s: 0.1               # 10 Hz LiDAR
+
+    # Voxel downsampling
+    scan_voxel_size_m: 0.25
+    map_voxel_size_m: 0.5
+
+    # ICP (point-to-plane placeholder)
+    icp_max_iterations: 20
+    icp_max_correspondence_dist_m: 1.0
+    icp_translation_epsilon: 0.001
+
+    # Local map
+    local_map_radius_m: 100.0
+    local_map_max_points: 500000
+    map_publish_period_s: 1.0
+
+    # Degeneracy detection
+    degeneracy_condition_number_threshold: 1.0e10
+
+    # IMU (shared physical sensor with VIO; same noise model)
+    imu_buffer_seconds: 10.0
+    gravity_magnitude: 9.80665
+    max_sync_offset_ms: 5.0
+
+    world_frame: odom
+    body_frame: base_link

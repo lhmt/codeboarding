@@ -1,0 +1,22 @@
+# Fusion (VIO + LIO + optional GPS / wheel odometry).
+fusion_node:
+  ros__parameters:
+    vio_state_topic: /slam/vio/state
+    lio_state_topic: /slam/lio/state
+
+    # Optional inputs (subscriptions are only created when enabled)
+    use_gps: false
+    gps_topic: /gps/fix
+    use_wheel_odom: false
+    wheel_odom_topic: /wheel/odom
+
+    # Weighted-average placeholder backend. Weights are renormalized over the
+    # sources that are alive; a source is dropped after staleness_timeout_s.
+    backend: weighted            # extension point: weighted | ekf | factor_graph
+    vio_weight: 0.5
+    lio_weight: 0.5
+    staleness_timeout_s: 0.5
+
+    publish_rate_hz: 50.0
+    world_frame: odom
+    body_frame: base_link

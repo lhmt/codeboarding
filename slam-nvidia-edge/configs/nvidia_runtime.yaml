@@ -1,0 +1,17 @@
+# TensorRT feature frontend runtime configuration.
+tensor_frontend_node:
+  ros__parameters:
+    camera_topic: /camera/image
+    features_topic: /slam/frontend/features
+
+    # Engine files are device/JetPack specific — always built on-target with
+    # trtexec from the SageMaker-exported ONNX (docs/nvidia_stack.md).
+    engine_path: ""              # empty => NullInferenceEngine (compiles/runs without a model)
+    onnx_path: ""                # optional: build engine from ONNX at startup when supported
+    use_fp16: true
+    max_keypoints: 512
+    score_threshold: 0.005
+
+    # CUDA
+    cuda_device_id: 0
+    use_dedicated_stream: true
