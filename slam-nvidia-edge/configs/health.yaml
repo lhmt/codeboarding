@@ -1,0 +1,18 @@
+# Global health aggregation rules.
+health_monitor_node:
+  ros__parameters:
+    input_topics:
+      - /slam/vio/health
+      - /slam/lio/health
+      - /slam/fused/health
+
+    # Thresholds (evaluated per incoming PoseHealth sample)
+    min_tracked_features: 30            # below  => WARN_TRACKING
+    max_reprojection_error_median: 3.0  # above  => WARN_REPROJECTION
+    max_gyro_bias_norm: 0.1             # above  => WARN_IMU_GYRO   [rad/s]
+    max_accel_bias_norm: 1.0            # above  => WARN_IMU_ACCEL  [m/s^2]
+    max_condition_number: 1.0e10        # above  => WARN_DEGENERACY
+
+    # A source that stops publishing for this long is reported STALE.
+    staleness_timeout_s: 1.0
+    publish_rate_hz: 10.0

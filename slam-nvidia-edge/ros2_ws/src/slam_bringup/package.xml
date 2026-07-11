@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>slam_bringup</name>
+  <version>0.1.0</version>
+  <description>Launch files for the slam-nvidia-edge stack.</description>
+  <maintainer email="slam@example.com">slam-nvidia-edge maintainers</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>vio_node</exec_depend>
+  <exec_depend>lio_node</exec_depend>
+  <exec_depend>fusion_node</exec_depend>
+  <exec_depend>map_node</exec_depend>
+  <exec_depend>health_monitor_node</exec_depend>
+  <exec_depend>tensor_frontend_node</exec_depend>
+  <exec_depend>recorder_node</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
