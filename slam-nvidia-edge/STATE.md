@@ -29,7 +29,7 @@ targets defined, 4 core test suites passing, Docker/bringup/docs complete.
 
 | # | Activity | Tier | Blocked by |
 |---|---|---|---|
-| A12 | CI: GitHub Actions job running scripts/build.sh in ros:jazzy container | haiku→sonnet | — |
+| A12 | CI workflow — **landed in PR #2** (.github/workflows/slam-edge-ci.yml); done when first run is green | sonnet (delegated ✓) | first green run |
 | A2 | Swap slam_core lie_group placeholder for Sophus | sonnet | A12 (CI gate first) |
 | A1 | Preintegration covariance + bias Jacobians (Forster eq. 62-64) | fable | — |
 | A3 | Real feature tracker (KLT or frontend features) in vio_node | sonnet | — |
@@ -55,4 +55,5 @@ targets defined, 4 core test suites passing, Docker/bringup/docs complete.
 - 2026-07-11: `ctest` 4/4 pass; all ROS-free headers pass `g++ -fsyntax-only`
   (C++20, `-Wall -Wextra -Wpedantic`); launch files black-clean.
 - `colcon build` / Docker image build: **not yet run on a ROS 2 Jazzy host** —
-  first CI run (A12) or on-target build should confirm and update this line.
+  the slam-edge-ci workflow's `colcon-build` job (ros:jazzy container) runs on
+  PR #2; its first green run closes A12 and this line should then be updated.
