@@ -19,16 +19,17 @@ hardens first.
    Sophus headers. Swap the implementation, keep the existing
    `tests/test_lie_group.cpp` as the regression gate, and add exp/log
    round-trip and adjoint tests near the singularity (small-angle) branch.
-2. **Complete IMU preintegration covariance propagation.**
-   `slam_core/imu_preintegration.hpp` propagates the mean but not the 15×15
-   covariance or bias Jacobians (`TODO(estimator)`). Implement discrete-time
-   propagation per Forster et al.; validate against numeric differentiation in
-   `tests/test_imu_preintegration.cpp`.
-3. **Finalize factor residuals.**
-   `slam_core/factor_residuals.hpp` has final residual layouts with placeholder
-   internals. Fill in the IMU factor (using the new preintegration Jacobians)
-   and reprojection factor with analytic Jacobians; test by checking gradient
-   consistency numerically.
+2. **Complete IMU preintegration covariance propagation.** *Done.*
+   `slam_core/imu_preintegration.hpp` propagates the 15×15 covariance and the
+   d(delta)/d(bias) Jacobians per Forster et al., with `biasCorrectedDelta()`
+   for first-order re-linearization; validated in
+   `tests/test_imu_preintegration.cpp` against full re-integration at a
+   perturbed bias and by positive-definiteness of the covariance.
+3. **Finalize factor residuals.** *Done.*
+   `slam_core/factor_residuals.hpp` now has the full between-states IMU factor
+   (bias-corrected deltas vs. gravity-compensated state deltas over a
+   `NavState` pair) and the analytic reprojection Jacobian, both checked
+   against numeric references in `tests/test_factor_residuals.cpp`.
 4. **Pin the Jetson base image.** Resolve the `TODO` in
    `docker/Dockerfile.jetson` and `docker/docker-compose.edge.yaml` to the
    JetPack release matching the target fleet (JetPack 6 / L4T r36.x for AGX
@@ -144,5 +145,6 @@ Phase 1 (slam_core + docker pin)
 Phase 6 runs alongside from Phase 2 onward.
 ```
 
-Recommended first PR: Phase 1 items 1–3 (pure `slam_core` + tests, no ROS
-dependency, fully verifiable off-robot).
+Phase 1 items 2–3 landed with this plan (pure `slam_core` + tests, no ROS
+dependency, verified off-robot). Remaining Phase 1: the Sophus swap (item 1)
+and the Jetson base-image pin (item 4).

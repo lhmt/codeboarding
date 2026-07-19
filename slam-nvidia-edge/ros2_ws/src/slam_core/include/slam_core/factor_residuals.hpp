@@ -1,15 +1,24 @@
 #pragma once
 
-// Factor residual shapes for the sliding-window / fusion back-ends.
-// These are dimension-correct placeholders: the residual layouts are final,
-// the error models are the extension points (swap in Ceres/GTSAM evaluators).
+// Factor residuals for the sliding-window / fusion back-ends.
+// Residual layouts are final; robust losses and solver wiring are the
+// extension points (Ceres/GTSAM evaluators consume these directly).
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include "slam_core/imu_preintegration.hpp"
 #include "slam_core/lie_group.hpp"
 
 namespace slam_core {
+
+// World-frame navigation state at a keyframe.
+struct NavState {
+  Eigen::Matrix3d rotation{Eigen::Matrix3d::Identity()};  // R_wb
+  Eigen::Vector3d position{Eigen::Vector3d::Zero()};      // p_wb
+  Eigen::Vector3d velocity{Eigen::Vector3d::Zero()};      // v_w
+  ImuBias bias;
+};
 
 // 15-dof IMU preintegration factor residual:
 // [dR (3), dv (3), dp (3), dbg (3), dba (3)].
@@ -30,6 +39,29 @@ struct ImuFactorResidual {
     r.segment<3>(12) = accel_bias_delta;
     return r;
   }
+
+  // Full between-states residual (Forster eq. 45): compares the preintegrated
+  // deltas — first-order corrected to state_i's bias — against the deltas
+  // implied by the two states under gravity.
+  static Eigen::Matrix<double, kDim, 1> evaluate(const NavState& state_i, const NavState& state_j,
+                                                 const ImuPreintegrator& pre,
+                                                 const Eigen::Vector3d& gravity) {
+    Eigen::Matrix3d delta_r;
+    Eigen::Vector3d delta_v, delta_p;
+    pre.biasCorrectedDelta(state_i.bias, delta_r, delta_v, delta_p);
+
+    const double t = pre.deltaTime();
+    const Eigen::Matrix3d Ri_t = state_i.rotation.transpose();
+    const Eigen::Matrix3d delta_r_predicted = Ri_t * state_j.rotation;
+    const Eigen::Vector3d delta_v_predicted =
+        Ri_t * (state_j.velocity - state_i.velocity - gravity * t);
+    const Eigen::Vector3d delta_p_predicted =
+        Ri_t * (state_j.position - state_i.position - state_i.velocity * t - 0.5 * gravity * t * t);
+
+    return evaluate(delta_r, delta_r_predicted, delta_v_predicted - delta_v,
+                    delta_p_predicted - delta_p, state_j.bias.gyro - state_i.bias.gyro,
+                    state_j.bias.accel - state_i.bias.accel);
+  }
 };
 
 // 2-dof visual reprojection residual (pixel error).
@@ -47,6 +79,18 @@ struct ReprojectionFactorResidual {
     const Eigen::Vector2d predicted(fx * landmark_camera.x() / landmark_camera.z() + cx,
                                     fy * landmark_camera.y() / landmark_camera.z() + cy);
     return predicted - observed_px;
+  }
+
+  // d(residual)/d(landmark_camera); zero for the clamped behind-plane branch.
+  static Eigen::Matrix<double, 2, 3> jacobian(const Eigen::Vector3d& landmark_camera, double fx, double fy) {
+    if (landmark_camera.z() <= 1e-6) {
+      return Eigen::Matrix<double, 2, 3>::Zero();
+    }
+    const double inv_z = 1.0 / landmark_camera.z();
+    Eigen::Matrix<double, 2, 3> J;
+    J << fx * inv_z, 0.0, -fx * landmark_camera.x() * inv_z * inv_z,
+        0.0, fy * inv_z, -fy * landmark_camera.y() * inv_z * inv_z;
+    return J;
   }
 };
 
