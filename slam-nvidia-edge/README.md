@@ -27,7 +27,7 @@ slam-nvidia-edge/
 ├── configs/                 # ROS parameter YAML files
 ├── scripts/                 # build / run / record helpers
 ├── tests/                   # ROS-free unit tests for slam_core (plain CMake + ctest)
-└── docs/                    # architecture, dataflow, NVIDIA stack, SageMaker boundary
+└── docs/                    # architecture, dataflow, NVIDIA stack, SageMaker boundary, plan
 ```
 
 `slam_core` is one addition on top of the base layout: shared math (SO(3),

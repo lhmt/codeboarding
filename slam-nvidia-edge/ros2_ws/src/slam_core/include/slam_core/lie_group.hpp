@@ -73,4 +73,17 @@ inline Eigen::Matrix3d rightJacobianSO3(const Eigen::Vector3d& omega) {
          ((theta - std::sin(theta)) / (theta2 * theta)) * W * W;
 }
 
+// Inverse of the right Jacobian; used by residual Jacobians on log-space errors.
+inline Eigen::Matrix3d rightJacobianInvSO3(const Eigen::Vector3d& omega) {
+  const double theta2 = omega.squaredNorm();
+  const Eigen::Matrix3d W = hat(omega);
+  if (theta2 < kSmallAngleThreshold * kSmallAngleThreshold) {
+    return Eigen::Matrix3d::Identity() + 0.5 * W;
+  }
+  const double theta = std::sqrt(theta2);
+  const double cot_half = 1.0 / std::tan(0.5 * theta);
+  return Eigen::Matrix3d::Identity() + 0.5 * W +
+         ((1.0 / theta2) - 0.5 * cot_half / theta) * W * W;
+}
+
 }  // namespace slam_core

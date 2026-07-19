@@ -5,6 +5,7 @@
 using slam_core::expSO3;
 using slam_core::hat;
 using slam_core::logSO3;
+using slam_core::rightJacobianInvSO3;
 using slam_core::rightJacobianSO3;
 using slam_core::vee;
 
@@ -44,6 +45,11 @@ static void run_tests() {
   const Eigen::Matrix3d lhs = expSO3(w + dw);
   const Eigen::Matrix3d rhs = expSO3(w) * expSO3(rightJacobianSO3(w) * dw);
   CHECK((lhs - rhs).norm() < 1e-10);
+
+  // Inverse right Jacobian: Jr(w)⁻¹ Jr(w) = I at generic and tiny angles
+  CHECK((rightJacobianInvSO3(w) * rightJacobianSO3(w) - Eigen::Matrix3d::Identity()).norm() < 1e-12);
+  const Eigen::Vector3d w_tiny(1e-10, 2e-10, -1e-10);
+  CHECK((rightJacobianInvSO3(w_tiny) * rightJacobianSO3(w_tiny) - Eigen::Matrix3d::Identity()).norm() < 1e-12);
 }
 
 TEST_MAIN()
