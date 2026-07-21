@@ -14,9 +14,9 @@ targets defined, 4 core test suites passing, Docker/bringup/docs complete.
 | Component | Maturity | Notes |
 |---|---|---|
 | slam_interfaces | contract-frozen | Msg changes require fable + version note here |
-| slam_core | skeleton+ | Math correct for accumulation; covariance/Jacobians TODO (A1) |
+| slam_core | functional-math | Preintegration covariance + bias Jacobians done (A1) |
 | vio_node | skeleton | Placeholder tracker + dead-reckoning window (A3, A4) |
-| lio_node | skeleton | ICP returns identity; deskew passthrough (A5, A6, A7) |
+| lio_node | skeleton+ | Deskew implemented (A6; PointCloud2 time-field wiring pending); ICP identity (A5, A7) |
 | fusion_node | skeleton | Weighted average only; GPS/wheel at zero weight (A8, A9) |
 | tensor_frontend_node | skeleton | Null engine; TrtEngine stub not deserializing (A10) |
 | health_monitor_node | functional | Rules implemented + tested |
@@ -29,18 +29,19 @@ targets defined, 4 core test suites passing, Docker/bringup/docs complete.
 
 | # | Activity | Tier | Blocked by |
 |---|---|---|---|
-| A12 | CI workflow — **landed in PR #2** (.github/workflows/slam-edge-ci.yml); done when first run is green | sonnet (delegated ✓) | first green run |
+| A12 | CI workflow — **landed in PR #2**; blocked by ACCOUNT-LEVEL GitHub Actions outage (14 attempts since 07-12: no runner ever assigned; fix is in GitHub billing/Actions settings) | sonnet (delegated ✓) | GitHub account fix |
+| A13 | Wire PointCloud2 per-point time fields into the new deskew overload | sonnet | driver with time field |
 | A2 | Swap slam_core lie_group placeholder for Sophus | sonnet | A12 (CI gate first) |
-| A1 | Preintegration covariance + bias Jacobians (Forster eq. 62-64) | fable | — |
 | A3 | Real feature tracker (KLT or frontend features) in vio_node | sonnet | — |
 | A10 | TrtEngine: deserialize .engine, enqueueV3, decode SuperPoint heads | sonnet | — |
-| A6 | Deskew with per-point time fields | sonnet | — |
-| A5 | Real point-to-plane ICP (small_gicp or hand-rolled GN) | sonnet+fable review | A1 |
-| A4 | Sliding-window backend (Ceres/GTSAM fixed-lag) | fable design → sonnet impl | A1 |
+| A5 | Real point-to-plane ICP (small_gicp or hand-rolled GN) | sonnet+fable review | — (A1 done) |
+| A4 | Sliding-window backend (Ceres/GTSAM fixed-lag) | fable design → sonnet impl | — (A1 done) |
 | A7 | Degeneracy solution remapping (Zhang & Singh) | fable | A5 |
-| A8 | Error-state EKF fusion backend | fable design → sonnet impl | A1 |
+| A8 | Error-state EKF fusion backend | fable design → sonnet impl | — (A1 done) |
 | A9 | GPS ENU anchoring + wheel-odom frame alignment | sonnet | A8 |
 | A11 | Persistent map / nvblox integration in map_node | sonnet | A5 |
+
+Done: A1 (preint covariance + bias Jacobians, fable, 2026-07-21), A6 (deskew, sonnet-delegated, 2026-07-21).
 
 ## Invariants (do not break; escalate if a task appears to require it)
 
@@ -52,8 +53,9 @@ targets defined, 4 core test suites passing, Docker/bringup/docs complete.
 
 ## Last verification
 
-- 2026-07-11: `ctest` 4/4 pass; all ROS-free headers pass `g++ -fsyntax-only`
-  (C++20, `-Wall -Wextra -Wpedantic`); launch files black-clean.
+- 2026-07-21: `ctest` 5/5 pass (adds scan_deskew; imu_preintegration extended
+  with numeric bias-Jacobian and covariance PSD checks); headers pass
+  `g++ -fsyntax-only` (C++20, `-Wall -Wextra -Wpedantic`).
 - `colcon build` / Docker image build: **not yet run on a ROS 2 Jazzy host** —
-  the slam-edge-ci workflow's `colcon-build` job (ros:jazzy container) runs on
-  PR #2; its first green run closes A12 and this line should then be updated.
+  blocked by the account-level GitHub Actions outage (see A12); update on
+  first green CI run or on-target build.

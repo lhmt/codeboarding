@@ -234,6 +234,15 @@
       "blocked_by": ["A5"]
     },
     {
+      "id": "A13",
+      "title": "Wire PointCloud2 per-point time fields into the deskew time-fraction overload",
+      "components": ["lio_node"],
+      "files": ["ros2_ws/src/lio_node/src/lio_node.cpp"],
+      "tier": "sonnet",
+      "blocked_by": ["driver exposing a time/t point field"],
+      "acceptance": "parseXyz extended to read time field when present; deskew(points, fractions, rotation) called; passthrough retained when field absent"
+    },
+    {
       "id": "A12",
       "title": "CI: GitHub Actions workflow running scripts/build.sh in ros:jazzy container",
       "components": ["scripts", "docs"],
