@@ -234,6 +234,14 @@
       "blocked_by": ["A5"]
     },
     {
+      "id": "A14",
+      "title": "KD-tree/ikd-tree correspondence search in point-to-plane ICP",
+      "components": ["lio_node"],
+      "files": ["ros2_ws/src/lio_node/include/lio_node/point_to_plane_icp.hpp"],
+      "tier": "sonnet",
+      "acceptance": "brute-force NN replaced behind the same align() signature; recovery test tolerances unchanged; measurable speedup documented on the test fixture"
+    },
+    {
       "id": "A13",
       "title": "Wire PointCloud2 per-point time fields into the deskew time-fraction overload",
       "components": ["lio_node"],
