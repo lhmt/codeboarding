@@ -17,7 +17,7 @@ targets defined, 4 core test suites passing, Docker/bringup/docs complete.
 | slam_core | functional-math | Preintegration covariance + bias Jacobians done (A1) |
 | vio_node | skeleton | Placeholder tracker + dead-reckoning window (A3, A4) |
 | lio_node | functional-core | Deskew (A6), real GN ICP (A5), Zhang-Singh degeneracy remap (A7) all done |
-| fusion_node | skeleton | Weighted avg default; error-state EKF backend in progress (A8, delegated); GPS/wheel (A9) |
+| fusion_node | functional-core | Weighted avg (default) + error-state EKF backend (A8, `backend: ekf`); GPS/wheel next (A9) |
 | tensor_frontend_node | skeleton | Null engine; TrtEngine stub not deserializing (A10) |
 | health_monitor_node | functional | Rules implemented + tested |
 | map_node | relay-only | Persistent mapping TODO (A11) |
@@ -34,15 +34,14 @@ targets defined, 4 core test suites passing, Docker/bringup/docs complete.
 | A2 | Swap slam_core lie_group placeholder for Sophus | sonnet | A12 (CI gate first) |
 | A3 | Real feature tracker (KLT or frontend features) in vio_node | sonnet | — |
 | A10 | TrtEngine: deserialize .engine, enqueueV3, decode SuperPoint heads | sonnet | — |
-| A8 | Error-state EKF fusion backend | fable design → sonnet impl (in progress) | — (A1 done) |
+| A9 | GPS ENU anchoring + wheel-odom frame alignment | sonnet | — (A8 done) |
 | A4 | Sliding-window backend (Ceres/GTSAM fixed-lag) | fable design → sonnet impl | — (A1 done) |
-| A9 | GPS ENU anchoring + wheel-odom frame alignment | sonnet | A8 |
 | A11 | Persistent map / nvblox integration in map_node | sonnet | — (A5 done) |
 | A14 | KD-tree/ikd-tree correspondence search in ICP (perf; brute-force O(N·M) now) | sonnet | — |
 | A3 | Real feature tracker in vio_node (needs ROS+OpenCV; not in ROS-free harness) | sonnet | — |
 | A10 | TrtEngine deserialize/enqueue/decode (needs TensorRT) | sonnet | — |
 
-Done: A1 (preint covariance+Jacobians, fable), A6 (deskew, sonnet), A5 (GN point-to-plane ICP, sonnet+fable review), A7 (Zhang-Singh degeneracy remap, fable) — all 2026-07-21.
+Done: A1 (preint covariance+Jacobians, fable), A6 (deskew, sonnet), A5 (GN point-to-plane ICP, sonnet+fable review), A7 (Zhang-Singh degeneracy remap, fable), A8 (error-state EKF fusion, sonnet+fable review) — all 2026-07-21.
 
 ## Invariants (do not break; escalate if a task appears to require it)
 
@@ -54,6 +53,10 @@ Done: A1 (preint covariance+Jacobians, fable), A6 (deskew, sonnet), A5 (GN point
 
 ## Last verification
 
+- 2026-07-21: `ctest` 8/8 pass (adds ekf_fusion: convergence, weighted
+  disagreement to x≈8.0, orientation recovery, covariance PSD/shrinkage;
+  fable review corrected the orientation residual to the world frame to match
+  the left-perturbation injection). Prior run below still holds.
 - 2026-07-21: `ctest` 7/7 pass (adds degeneracy_remap: observable-subspace
   projection zeros unobservable eigen-directions in a rotated basis and on a
   physical single-plane Hessian, idempotent+symmetric; point_to_plane_icp

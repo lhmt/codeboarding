@@ -14,6 +14,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 
+#include "fusion_node/ekf_backend.hpp"
 #include "fusion_node/fusion_backend.hpp"
 #include "slam_interfaces/msg/estimator_state.hpp"
 #include "slam_interfaces/msg/pose_health.hpp"
@@ -36,11 +37,14 @@ class FusionNode : public rclcpp::Node {
     const double rate = declare_parameter<double>("publish_rate_hz", 50.0);
     world_frame_ = declare_parameter<std::string>("world_frame", "odom");
 
-    if (backend_name != "weighted") {
-      RCLCPP_WARN(get_logger(), "Backend '%s' not implemented yet; using weighted average",
-                  backend_name.c_str());
+    if (backend_name == "ekf") {
+      backend_ = std::make_unique<fusion_node::ErrorStateEkfBackend>();
+    } else {
+      if (backend_name != "weighted") {
+        RCLCPP_WARN(get_logger(), "Unknown backend '%s'; using weighted average", backend_name.c_str());
+      }
+      backend_ = std::make_unique<fusion_node::WeightedAverageBackend>();
     }
-    backend_ = std::make_unique<fusion_node::WeightedAverageBackend>();
 
     pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>("/slam/fused/pose", 10);
     state_pub_ = create_publisher<slam_interfaces::msg::EstimatorState>("/slam/fused/state", 10);
