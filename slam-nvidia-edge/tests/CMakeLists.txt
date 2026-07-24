@@ -29,3 +29,8 @@ add_executable(test_point_to_plane_icp test_point_to_plane_icp.cpp)
 target_include_directories(test_point_to_plane_icp PRIVATE ${SLAM_CORE_INCLUDE} ${LIO_NODE_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(test_point_to_plane_icp PRIVATE Eigen3::Eigen)
 add_test(NAME point_to_plane_icp COMMAND test_point_to_plane_icp)
+
+add_executable(test_degeneracy_remap test_degeneracy_remap.cpp)
+target_include_directories(test_degeneracy_remap PRIVATE ${SLAM_CORE_INCLUDE} ${LIO_NODE_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(test_degeneracy_remap PRIVATE Eigen3::Eigen)
+add_test(NAME degeneracy_remap COMMAND test_degeneracy_remap)

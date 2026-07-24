@@ -22,6 +22,7 @@
 #include "slam_core/health_rules.hpp"
 #include "slam_core/imu_buffer.hpp"
 #include "slam_core/imu_preintegration.hpp"
+#include "slam_core/lie_group.hpp"
 #include "slam_interfaces/msg/estimator_state.hpp"
 #include "slam_interfaces/msg/pose_health.hpp"
 
@@ -121,10 +122,22 @@ class LioNode : public rclcpp::Node {
     for (const auto& p : downsampled) world_points.push_back(predicted_r * p + predicted_p);
 
     const auto icp = icp_->align(world_points, local_map_->points());
-    rotation_ = icp.rotation_increment * predicted_r;
-    position_ = icp.rotation_increment * predicted_p + icp.translation_increment;
-
     const auto degeneracy = degeneracy_->analyze(icp.hessian);
+
+    // Apply the ICP increment, but along unobservable eigen-directions keep the
+    // IMU prediction (Zhang & Singh remapping) so corridors/tunnels don't drift.
+    Eigen::Matrix3d applied_r = icp.rotation_increment;
+    Eigen::Vector3d applied_t = icp.translation_increment;
+    if (degeneracy.is_degenerate) {
+      Eigen::Matrix<double, 6, 1> dx;
+      dx.head<3>() = slam_core::logSO3(icp.rotation_increment);
+      dx.tail<3>() = icp.translation_increment;
+      const Eigen::Matrix<double, 6, 1> dx_remapped = degeneracy_->remap(dx, icp.hessian);
+      applied_r = slam_core::expSO3(dx_remapped.head<3>());
+      applied_t = dx_remapped.tail<3>();
+    }
+    rotation_ = applied_r * predicted_r;
+    position_ = applied_r * predicted_p + applied_t;
     local_map_->insert(world_points, position_);
 
     publishOutputs(msg.header.stamp, icp.fitness, degeneracy.condition_number, degeneracy.is_degenerate,
