@@ -8,6 +8,10 @@ Production-grade local VIO/LIO SLAM stack for NVIDIA Jetson AGX Orin.
   training, evaluation, and model registry. No cloud dependency exists in the
   real-time estimation loop.
 
+**Agent sessions start here:** `CLAUDE.md` (session protocol) → `STATE.md`
+(current state, work queue) → `docs/code_graph.json` (components, edit tiers,
+activity definitions for model-tier delegation). Full spec: `docs/agent_protocol.md`.
+
 ## Layout
 
 ```

@@ -207,3 +207,6 @@ tests/integration/projects/**/*.pkl
 # - MD files associated with components
 .codeboarding/cache/
 .codeboarding/components/
+
+# Claude Code agent worktrees (ephemeral)
+/.claude/

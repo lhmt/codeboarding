@@ -1,0 +1,59 @@
+name: SLAM Edge CI
+
+on:
+  pull_request:
+    paths:
+      - 'slam-nvidia-edge/**'
+      - '.github/workflows/slam-edge-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'slam-nvidia-edge/**'
+      - '.github/workflows/slam-edge-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  core-tests:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: slam-nvidia-edge
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Eigen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libeigen3-dev
+
+      - name: Configure core tests
+        run: cmake -S tests -B tests/build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build core tests
+        run: cmake --build tests/build -j"$(nproc)"
+
+      - name: Run core tests
+        run: ctest --test-dir tests/build --output-on-failure
+
+  colcon-build:
+    runs-on: ubuntu-24.04
+    container:
+      image: ros:jazzy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y build-essential cmake libeigen3-dev
+
+      - name: colcon build
+        shell: bash
+        working-directory: slam-nvidia-edge/ros2_ws
+        run: |
+          . /opt/ros/jazzy/setup.sh
+          colcon build --event-handlers console_cohesion+ --cmake-args -DCMAKE_BUILD_TYPE=Release

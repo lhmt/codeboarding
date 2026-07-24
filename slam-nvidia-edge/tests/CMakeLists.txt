@@ -11,6 +11,8 @@ find_package(Eigen3 REQUIRED)
 enable_testing()
 
 set(SLAM_CORE_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/../ros2_ws/src/slam_core/include)
+set(LIO_NODE_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/../ros2_ws/src/lio_node/include)
+set(FUSION_NODE_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/../ros2_ws/src/fusion_node/include)
 
 foreach(name lie_group imu_preintegration factor_residuals health_monitor)
   add_executable(test_${name} test_${name}.cpp)
@@ -18,3 +20,23 @@ foreach(name lie_group imu_preintegration factor_residuals health_monitor)
   target_link_libraries(test_${name} PRIVATE Eigen3::Eigen)
   add_test(NAME ${name} COMMAND test_${name})
 endforeach()
+
+add_executable(test_scan_deskew test_scan_deskew.cpp)
+target_include_directories(test_scan_deskew PRIVATE ${SLAM_CORE_INCLUDE} ${LIO_NODE_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(test_scan_deskew PRIVATE Eigen3::Eigen)
+add_test(NAME scan_deskew COMMAND test_scan_deskew)
+
+add_executable(test_point_to_plane_icp test_point_to_plane_icp.cpp)
+target_include_directories(test_point_to_plane_icp PRIVATE ${SLAM_CORE_INCLUDE} ${LIO_NODE_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(test_point_to_plane_icp PRIVATE Eigen3::Eigen)
+add_test(NAME point_to_plane_icp COMMAND test_point_to_plane_icp)
+
+add_executable(test_degeneracy_remap test_degeneracy_remap.cpp)
+target_include_directories(test_degeneracy_remap PRIVATE ${SLAM_CORE_INCLUDE} ${LIO_NODE_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(test_degeneracy_remap PRIVATE Eigen3::Eigen)
+add_test(NAME degeneracy_remap COMMAND test_degeneracy_remap)
+
+add_executable(test_ekf_fusion test_ekf_fusion.cpp)
+target_include_directories(test_ekf_fusion PRIVATE ${SLAM_CORE_INCLUDE} ${FUSION_NODE_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(test_ekf_fusion PRIVATE Eigen3::Eigen)
+add_test(NAME ekf_fusion COMMAND test_ekf_fusion)
